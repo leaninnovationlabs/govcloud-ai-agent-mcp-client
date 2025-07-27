@@ -1,0 +1,18 @@
+meta {
+  name: Send Streaming Message
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/chat/stream
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "content": "Tell me a story about AI agents",
+    "conversation_id": 1
+  }
+} 

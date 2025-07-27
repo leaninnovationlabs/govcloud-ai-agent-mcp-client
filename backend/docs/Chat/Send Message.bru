@@ -1,0 +1,18 @@
+meta {
+  name: Send Message
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/chat/
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "content": "Hello, what can you do?",
+    "conversation_id": 1
+  }
+} 

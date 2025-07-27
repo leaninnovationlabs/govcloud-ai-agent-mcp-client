@@ -1,0 +1,43 @@
+[project]
+name = "govcloud-ai-agent-poc"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiosqlite>=0.21.0",
+    "boto3>=1.39.13",
+    "fastapi>=0.116.1",
+    "pydantic-ai[logfire]>=0.4.7",
+    "sqlalchemy>=2.0.41",
+    "structlog>=25.4.0",
+]
+
+[project.optional-dependencies]
+backend = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "aiosqlite>=0.20.0",
+    "alembic>=1.14.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.6.0",
+    "python-multipart>=0.0.17",
+    "structlog>=24.4.0",
+    "colorama>=0.4.6",
+    "python-json-logger>=2.0.0",
+    "logfire>=0.65.0",
+    "python-dotenv>=1.0.0",
+]
+
+mcp = [
+    "fastmcp>=0.4.0",
+    "httpx>=0.28.0",
+    "python-dotenv>=1.0.0",
+    "uvicorn[standard]>=0.32.0",
+]
+
+[dependency-groups]
+backend = [
+    "pydantic-graph>=0.4.7",
+]
