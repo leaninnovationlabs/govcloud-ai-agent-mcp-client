@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from ..agent.repository import MessageRepository
+from ..agent.models import MessageRead
 
 from ..agent.models import MessageRead
 from ..core.response import APIResponse
@@ -53,18 +55,10 @@ async def get_conversation_messages(
     conversation_id: int,
     session: AsyncSession = Depends(get_db_session),
 ) -> APIResponse[list[MessageRead]]:
-    # Use ConversationService to verify conversation exists first
-    conversation_service = ConversationService(session)
-    # This will raise NotFoundError if conversation doesn't exist
-    await conversation_service.get_conversation_by_id(conversation_id)
-    
-    # Use MessageRepository directly to get messages - no need for AI agent
-    from ..agent.repository import MessageRepository
     message_repository = MessageRepository(session)
     messages = await message_repository.get_messages_by_conversation_id(conversation_id)
     
     # Convert to read models
-    from ..agent.models import MessageRead
     message_data = [MessageRead.model_validate(msg) for msg in messages]
     
     return APIResponse.success_response(message_data) 
