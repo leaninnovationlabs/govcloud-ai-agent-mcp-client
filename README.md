@@ -5,10 +5,11 @@ A FastAPI-based AI agent system for GovCloud environments, featuring AWS Bedrock
 ## Features
 
 - **AI-Powered Conversations**: Claude 3.5 Sonnet integration via AWS Bedrock
-- **Dynamic Tool Discovery**: MCP (Model Context Protocol) server integration
+- **Dynamic Tool Discovery**: MCP (Model Context Protocol) server integration with Wikipedia search
+- **Modern Web Interface**: React frontend with real-time chat interface
 - **Persistent Storage**: SQLite database for conversation history
 - **Streaming Responses**: Real-time AI response streaming
-- **FastAPI Backend**: Modern async Python web framework
+- **FastAPI Backend**: Modern async Python web framework with comprehensive API
 - **Environment-Based Configuration**: Secure configuration management
 
 ## Architecture
@@ -19,20 +20,26 @@ A FastAPI-based AI agent system for GovCloud environments, featuring AWS Bedrock
 │   │   ├── agent/          # AI agent logic and MCP integration
 │   │   ├── conversation/   # Conversation management
 │   │   ├── core/           # Configuration and utilities
-│   │   └── database/       # Database connection and models
+│   │   ├── database/       # Database connection and models
+│   │   └── util/           # Logging and middleware utilities
 │   ├── docs/               # API documentation (Bruno collection)
 │   └── alembic/           # Database migration scripts
-├── frontend/               # Frontend application (if applicable)
-├── mcp_server/            # MCP server implementation
-└── main.py                # Application entry point
+├── frontend/               # React + Vite frontend application
+│   ├── src/
+│   │   ├── components/     # Reusable UI components
+│   │   ├── pages/          # Page components (Chat)
+│   │   └── lib/            # Utilities and state management
+│   └── public/            # Static assets
+├── mcp_server/            # MCP server implementation with Wikipedia integration
+└── pyproject.toml         # uv project configuration
 ```
 
 ## Prerequisites
 
-- Python 3.8+
-- AWS Account with Bedrock access
-- MCP Server endpoint
-- SQLite (included)
+- **Python 3.12+** (managed by uv)
+- **Node.js 18+** (for frontend development)
+- **AWS Account** with Bedrock access
+- **uv** package manager ([install instructions](https://docs.astral.sh/uv/getting-started/installation/))
 
 ## Installation
 
@@ -42,16 +49,20 @@ A FastAPI-based AI agent system for GovCloud environments, featuring AWS Bedrock
    cd govcloud-ai-agent-poc
    ```
 
-2. **Install dependencies**
+2. **Install all dependencies**
    ```bash
-   pip install -r requirements.txt
-   # or if using uv
+   # Install Python dependencies with uv
    uv sync
+   
+   # Install frontend dependencies
+   cd frontend
+   npm install
+   cd ..
    ```
 
 3. **Set up environment variables**
    
-   Create a `.env` file in the `backend/` directory with the following configuration:
+   Create a `.env` file in the `backend/` directory:
 
    ```env
    # Database Configuration
@@ -61,14 +72,14 @@ A FastAPI-based AI agent system for GovCloud environments, featuring AWS Bedrock
    API_TITLE=GovCloud AI Agent API
    API_VERSION=1.0.0
 
-   # AWS Bedrock Configuration (uses AWS credential chain - see setup below)
+   # AWS Bedrock Configuration (uses AWS credential chain)
    AWS_REGION=us-east-1
 
    # Claude Model Configuration  
    CLAUDE_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
 
    # MCP Server Configuration
-   MCP_SERVER_URL=https://your-mcp-server.example.com
+   MCP_SERVER_URL=http://localhost:8001
    MCP_TIMEOUT=30.0
 
    # Application Configuration
@@ -78,12 +89,14 @@ A FastAPI-based AI agent system for GovCloud environments, featuring AWS Bedrock
    # Logging Configuration
    LOG_LEVEL=INFO
    LOG_MODE=LOCAL
+
+   # Optional: Logfire token for observability
+   LOGFIRE_TOKEN=
    ```
 
 4. **Initialize the database**
    ```bash
-   cd backend
-   alembic upgrade head
+   make migrate
    ```
 
 ## Configuration
@@ -97,118 +110,139 @@ A FastAPI-based AI agent system for GovCloud environments, featuring AWS Bedrock
 | `API_VERSION` | API version | `1.0.0` | No |
 | `AWS_REGION` | AWS region for Bedrock | `us-east-1` | No |
 | `CLAUDE_MODEL_ID` | Claude model ID for Bedrock | `anthropic.claude-3-5-sonnet-20241022-v2:0` | No |
-| `MCP_SERVER_URL` | MCP server endpoint URL | - | Yes |
+| `MCP_SERVER_URL` | MCP server endpoint URL | `http://localhost:8001` | No |
 | `MCP_TIMEOUT` | MCP request timeout in seconds | `30.0` | No |
 | `APP_NAME` | Application name | `GovCloud AI Agent` | No |
 | `DEBUG` | Enable debug mode | `false` | No |
 | `LOG_LEVEL` | Logging level | `INFO` | No |
 | `LOG_MODE` | Logging format (`LOCAL` or `JSON`) | `LOCAL` | No |
+| `LOGFIRE_TOKEN` | Logfire observability token | `` | No |
 
 ### AWS Bedrock Setup
 
-**🔐 2025 Security Approach**: This application follows modern AWS security best practices by using the [AWS credential provider chain](https://www.linkedin.com/pulse/cracking-aws-credential-chain-what-you-need-know-never-konkowski-0ofwe) instead of hardcoded credentials. This means:
-- ✅ Automatic credential discovery
-- ✅ No secrets in code or environment variables  
-- ✅ Works seamlessly across local dev, CI/CD, and production
-- ✅ Follows AWS Well-Architected Security Pillar
+**🔐 Security Approach**: This application uses the [AWS credential provider chain](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html) for secure authentication without hardcoded credentials.
 
 1. **Enable Claude 3.5 Sonnet in Bedrock**
    - Navigate to AWS Bedrock console
    - Go to "Model access" in the left sidebar
    - Request access to "Anthropic Claude 3.5 Sonnet v2"
-   - Wait for approval (usually immediate for most regions)
+   - Wait for approval (usually immediate)
 
-2. **Configure AWS Credentials (2025 Best Practices)**
+2. **Configure AWS Credentials**
    
-   The application automatically uses the [AWS credential provider chain](https://www.linkedin.com/pulse/cracking-aws-credential-chain-what-you-need-know-never-konkowski-0ofwe). Choose the appropriate method for your environment:
+   Choose the appropriate method for your environment:
 
    **For Local Development:**
    ```bash
-   # Option A: AWS CLI profiles (recommended)
+   # AWS CLI (recommended)
    aws configure
-   # Follow prompts to set up credentials and default region
    
-   # Option B: AWS SSO (for organizations using AWS Identity Center)
+   # AWS SSO (for organizations)
    aws configure sso
-   # Follow prompts to set up SSO profile
    
-   # Option C: Named profiles for multiple accounts
-   aws configure --profile dev
-   aws configure --profile prod
-   export AWS_PROFILE=dev  # Use specific profile
+   # Named profiles
+   aws configure --profile govcloud
+   export AWS_PROFILE=govcloud
    ```
 
-   **For Production Deployments:**
-   - **EC2/ECS**: Use IAM roles (no credential configuration needed)
-   - **Lambda**: Use execution roles (automatic)
-   - **GitHub Actions**: Use OIDC with IAM roles
-   - **Docker**: Mount `~/.aws` or use IAM roles
+   **For Production:**
+   - **EC2/ECS**: Use IAM roles
+   - **Lambda**: Use execution roles
+   - **CI/CD**: Use OIDC with IAM roles
 
-   **⚠️ Security Note**: Never use `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables in 2025. This is considered a security anti-pattern.
-
-3. **Verify Bedrock Access**
+3. **Verify Setup**
    ```bash
-   aws bedrock list-foundation-models --region us-east-1
-   ```
-
-4. **Test Your Setup**
-   ```bash
-   # Quick AWS CLI test
+   # Test AWS access
    aws sts get-caller-identity
    aws bedrock list-foundation-models --region us-east-1
    
-   # Comprehensive validation (recommended)
+   # Comprehensive validation
    cd backend
    uv run python validate_aws_setup.py
    ```
-   
-   The validation script will check:
-   - ✅ AWS credential chain configuration
-   - ✅ Bedrock service access
-   - ✅ Claude 3.5 Sonnet model availability
-   - ✅ IAM permissions
-
-### MCP Server Configuration
-
-The application connects to an MCP (Model Context Protocol) server for dynamic tool discovery. Ensure your MCP server:
-
-- Implements the MCP specification
-- Is accessible via HTTPS
-- Supports the tools/list and tools/call endpoints
-- Has proper authentication if required
 
 ## Running the Application
 
-### Development Mode
+The project includes a comprehensive Makefile for easy development. Use `make help` to see all available commands.
+
+### Quick Start
 
 ```bash
-# From project root
-python main.py
+# Complete setup
+make setup
 
-# Or using uvicorn directly
-cd backend
-uvicorn app.app:app --reload --host 0.0.0.0 --port 8000
+# Start all services (backend + MCP server + frontend)
+make run-all
+
+# Access the application
+# - Frontend: http://localhost:5173
+# - Backend API: http://localhost:8000
+# - MCP Server: http://localhost:8001
 ```
 
-### Production Mode
+### Individual Services
 
 ```bash
-# Set production environment variables
-export DEBUG=false
-export LOG_MODE=JSON
-export LOG_LEVEL=WARNING
+# Backend only
+make run-backend
 
-# Run with production ASGI server
-uvicorn backend.app.app:app --host 0.0.0.0 --port 8000 --workers 4
+# MCP server only  
+make run-mcp
+
+# Frontend only (in separate terminal)
+cd frontend
+npm run dev
 ```
 
-### Using Docker
+### Development Commands
 
 ```bash
-cd backend
-docker build -t govcloud-ai-agent .
-docker run -p 8000:8000 --env-file .env govcloud-ai-agent
+# Install dependencies
+make install              # All dependencies
+make install-backend      # Backend only
+make install-mcp         # MCP server only
+
+# Database operations
+make migrate             # Apply migrations
+make makemigrations m="description"  # Create new migration
+
+# Docker operations
+make docker-build        # Build backend container
+make docker-run          # Run in container
+make docker-stop         # Stop container
+
+# Utilities
+make clean              # Clean build artifacts
+make status             # Show project status
 ```
+
+## Frontend Development
+
+The frontend is built with React, Vite, and TailwindCSS:
+
+```bash
+cd frontend
+
+# Development server
+npm run dev
+
+# Build for production  
+npm run build
+
+# Preview production build
+npm run preview
+
+# Linting
+npm run lint
+```
+
+### Frontend Features
+
+- **Real-time Chat Interface**: Clean, modern chat UI
+- **Conversation Management**: Create, switch, and manage multiple conversations
+- **Streaming Responses**: Real-time AI response display
+- **Responsive Design**: Works on desktop and mobile
+- **State Management**: Zustand for efficient state handling
 
 ## API Usage
 
@@ -242,104 +276,131 @@ curl -X POST http://localhost:8000/conversations/{conversation_id}/messages/stre
 ## API Documentation
 
 Interactive API documentation is available at:
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+- **Swagger UI**: `http://localhost:8000/docs`
+- **ReDoc**: `http://localhost:8000/redoc`
+- **Bruno Collection**: `backend/docs/` for manual testing
 
-Bruno API collection is available in `backend/docs/` for testing.
+## MCP Server
+
+The integrated MCP server provides Wikipedia search capabilities:
+
+- **Search Wikipedia**: `search_wikipedia(query, limit=5)`
+- **Get Article**: `get_wikipedia_article(title)`
+- **Health Check**: `http://localhost:8001/health`
+
+The MCP server automatically starts with `make run-all` and integrates with the AI agent for dynamic tool discovery.
 
 ## Database Management
 
-### Migrations
+### Migrations with uv
 
 ```bash
-cd backend
-
 # Create a new migration
-alembic revision --autogenerate -m "Description of changes"
+make makemigrations m="Description of changes"
 
 # Apply migrations
-alembic upgrade head
+make migrate
 
-# Rollback migrations
-alembic downgrade -1
+# Rollback (manual)
+cd backend
+uv run alembic downgrade -1
 ```
 
 ### Database Schema
 
-The application uses SQLAlchemy with async support. Main entities:
 - **Conversations**: Chat sessions with metadata
-- **Messages**: Individual messages in conversations
-- **Agent State**: Persistent agent state and context
+- **Messages**: Individual messages with role and content
+- **Agent State**: Persistent agent context
 
 ## Logging
 
-The application supports two logging modes:
+### Development Mode (`LOG_MODE=LOCAL`)
+Colorized console output with structured information.
 
-### Local Development (`LOG_MODE=LOCAL`)
-Human-readable console output with colors and formatting.
+### Production Mode (`LOG_MODE=JSON`)
+Structured JSON logs for aggregation systems.
 
-### Production (`LOG_MODE=JSON`)
-Structured JSON logs suitable for log aggregation systems.
-
-### Log Levels
-- `DEBUG`: Detailed diagnostic information
-- `INFO`: General application flow
-- `WARNING`: Important events that aren't errors
-- `ERROR`: Error conditions
-- `CRITICAL`: Critical errors that may abort
+### Observability
+Optional Logfire integration for advanced monitoring and tracing.
 
 ## Troubleshooting
 
 ### Common Issues
 
 1. **AWS Bedrock Access Denied**
-   - Check your AWS credential chain: `aws sts get-caller-identity`
-   - Verify Claude 3.5 Sonnet access is enabled in Bedrock console
-   - Ensure your IAM user/role has `bedrock:InvokeModel` permissions
-   - Test with: `aws bedrock list-foundation-models --region us-east-1`
+   ```bash
+   # Check credentials
+   aws sts get-caller-identity
+   
+   # Verify Bedrock access
+   aws bedrock list-foundation-models --region us-east-1
+   
+   # Run validation script
+   cd backend && uv run python validate_aws_setup.py
+   ```
 
 2. **MCP Server Connection Issues**
-   - Verify the MCP server URL is accessible
-   - Check network connectivity and firewall rules
-   - Validate MCP server implementation
+   ```bash
+   # Check if MCP server is running
+   curl http://localhost:8001/health
+   
+   # Start MCP server
+   make run-mcp
+   ```
 
-3. **Database Connection Issues**
-   - Check database file permissions
-   - Verify SQLite installation
-   - Run database migrations
+3. **Frontend Build Issues**
+   ```bash
+   cd frontend
+   rm -rf node_modules package-lock.json
+   npm install
+   npm run dev
+   ```
 
-4. **Configuration Issues**
-   - Ensure `.env` file is in the `backend/` directory
-   - Check for typos in variable names
-   - Verify file encoding (UTF-8)
-   - For AWS issues, check credential chain: `aws configure list`
+4. **Database Issues**
+   ```bash
+   # Reset database
+   rm backend/chat.db
+   make migrate
+   ```
 
 ### Debug Mode
 
-Enable debug mode for detailed logging:
 ```bash
 export DEBUG=true
 export LOG_LEVEL=DEBUG
+make run-backend
 ```
+
+## Project Commands Reference
+
+| Command | Description |
+|---------|-------------|
+| `make help` | Show all available commands |
+| `make setup` | Complete project setup |
+| `make install` | Install all dependencies |
+| `make run-all` | Start all services |
+| `make run-backend` | Start backend only |
+| `make run-mcp` | Start MCP server only |
+| `make migrate` | Apply database migrations |
+| `make docker-build` | Build Docker image |
+| `make clean` | Clean build artifacts |
+| `make status` | Show project status |
+
+## Security
+
+- **AWS Credential Chain**: Secure credential management
+- **No Hardcoded Secrets**: Environment-based configuration
+- **HTTPS Required**: For production MCP server connections
+- **CORS Configuration**: Frontend-backend communication
+- **Structured Logging**: Security event tracking
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Make your changes
-4. Run tests
+3. Make your changes with proper tests
+4. Ensure code formatting: `make format` (when available)
 5. Submit a pull request
-
-## Security
-
-- **Never commit AWS credentials to version control**
-- **Use AWS credential chain** (IAM roles, AWS CLI profiles, AWS SSO) - never use hardcoded credentials
-- **Avoid `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` environment variables** in 2025
-- **Ensure MCP server connections use HTTPS**
-- **Regular dependency updates** and security scanning
-- **Follow AWS Well-Architected Security Pillar** best practices
-- **Use least privilege IAM policies** for all resources
-- **Enable CloudTrail logging** for audit trails
 
 ## Support
 

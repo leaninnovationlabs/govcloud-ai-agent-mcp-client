@@ -26,7 +26,7 @@ export const MessageList = ({ messages, loading, thinking }) => {
               GovCloud Intelligence Platform
             </h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Secure communication channel ready. Your conversations are protected by federal-grade encryption protocols.
+              Secure communication channel ready. 
             </p>
           </div>
         </div>
