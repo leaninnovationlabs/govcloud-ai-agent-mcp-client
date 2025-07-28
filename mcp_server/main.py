@@ -7,8 +7,7 @@ from dotenv import load_dotenv
 
 from .server import create_mcp_server
 
-# Load environment variables from .env file
-env_file = Path(__file__).parent.parent / ".env"
+env_file = Path(__file__).parent.parent / "mcp_server/.env"
 if env_file.exists():
     load_dotenv(env_file)
     logger = logging.getLogger(__name__)
@@ -20,26 +19,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Configuration from environment variables
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8001"))
 
 
 async def main():
-    """Main entry point for the Wikipedia MCP server"""
-    logger.info(f"Starting Wikipedia MCP Server on {HOST}:{PORT}")
+    """Main entry point for the Athena MCP server"""
+    logger.info(f"Starting Athena MCP Server on {HOST}:{PORT}")
     logger.info("Server capabilities:")
-    logger.info("  - Wikipedia article search")
-    logger.info("  - Full article content retrieval")
-    logger.info("  - Multi-language support")
-    logger.info("  - Random article discovery")
-    logger.info("  - Article existence checking")
+    logger.info("  - Data lake schema discovery")
+    logger.info("  - SQL query execution via Athena")
+    logger.info("  - Natural language query generation")
+    logger.info("  - Table metadata inspection")
+    logger.info(f"  - AWS Region: {os.getenv('AWS_REGION', 'us-east-1')}")
+    logger.info(f"  - S3 Bucket: {os.getenv('ATHENA_S3_BUCKET', 'Not configured')}")
     
-    # Create and start the MCP server
-    mcp_server = create_mcp_server()
-    
-    # Use FastMCP's native HTTP transport with stateless_http=True
     try:
+        mcp_server = create_mcp_server()
+        
         await mcp_server.mcp.run_async(
             transport="http",
             host=HOST,
@@ -47,12 +44,15 @@ async def main():
             path="/mcp",
             stateless_http=True
         )
+    except ValueError as e:
+        logger.error(f"Configuration error: {e}")
+        raise
     except Exception as e:
         logger.error(f"Server startup failed: {e}")
         raise
     finally:
-        # Cleanup
-        await mcp_server.cleanup()
+        if 'mcp_server' in locals():
+            await mcp_server.cleanup()
 
 
 def main_sync():
@@ -60,7 +60,7 @@ def main_sync():
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logger.info("Shutting down Wikipedia MCP Server...")
+        logger.info("Shutting down Athena MCP Server...")
     except Exception as e:
         logger.error(f"Application error: {e}")
         raise

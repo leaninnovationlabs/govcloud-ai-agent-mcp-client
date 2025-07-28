@@ -1,0 +1,37 @@
+project_name: "maritime-shipping-lake"
+environment: "dev"
+region: "us-east-1"
+
+# S3 Configuration
+s3:
+  bucket_name: "maritime-shipping-data-lake-dev"
+  enable_versioning: true
+  force_destroy: true  # Allow destroy for dev environment
+
+# Glue Configuration  
+glue:
+  database_name: "maritime_shipping_db"
+  crawler_name: "maritime-data-crawler"
+  
+# Athena Configuration
+athena:
+  workgroup_name: "maritime-analytics"
+  results_bucket: "maritime-athena-results-dev"
+
+# Data Tables Configuration
+tables:
+  - name: "ship_parts"
+    description: "Inventory of ship parts and components"
+  - name: "food_inventory" 
+    description: "Food inventory including hot dogs and chicken tenders"
+  - name: "vessels"
+    description: "Fleet vessel information"
+  - name: "shipments"
+    description: "Shipping manifest and logistics data"
+
+# Tags
+tags:
+  Environment: "dev"
+  Project: "maritime-shipping-analytics"
+  Owner: "data-engineering"
+  ManagedBy: "terraform" 

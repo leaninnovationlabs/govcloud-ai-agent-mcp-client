@@ -1,39 +1,47 @@
-from datetime import datetime
-from typing import Optional, List
-
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
 
 
-class WikipediaSearchResult(BaseModel):
-    model_config = ConfigDict(str_strip_whitespace=True, frozen=True)
-    
-    title: str = Field(..., description="Article title")
-    description: str = Field(..., description="Article description or snippet")
-    url: str = Field(..., description="Full URL to the Wikipedia article")
-
-
-class WikipediaSearchResponse(BaseModel):
+class TableSchema(BaseModel):
     model_config = ConfigDict(frozen=True)
     
-    query: str = Field(..., description="Original search query")
-    results: List[WikipediaSearchResult] = Field(default_factory=list)
-    total_count: int = Field(..., ge=0, description="Total number of results found")
-    language: str = Field(..., pattern=r"^[a-z]{2}$", description="Language code")
+    table_name: str = Field(..., description="Name of the table")
+    database_name: str = Field(..., description="Database containing the table")
+    columns: List[Dict[str, str]] = Field(..., description="Column definitions with name, type, and optional comment")
+    location: str = Field(..., description="S3 location of the table data")
+    input_format: Optional[str] = Field(None, description="Input format of the table data")
+    partition_keys: List[Dict[str, str]] = Field(default_factory=list, description="Partition key definitions")
 
 
-class WikipediaArticle(BaseModel):
-    model_config = ConfigDict(str_strip_whitespace=True, frozen=True)
+class QueryResult(BaseModel):
+    model_config = ConfigDict(frozen=True)
     
-    title: str = Field(..., description="Article title")
-    content: str = Field(..., description="Full article content")
-    summary: str = Field(..., description="Article summary/introduction")
-    url: str = Field(..., description="Full URL to the Wikipedia article")
-    language: str = Field(..., pattern=r"^[a-z]{2}$", description="Language code")
-    last_modified: Optional[str] = Field(None, description="Last modification timestamp")
+    query_id: str = Field(..., description="Athena query execution ID")
+    status: str = Field(..., description="Query execution status")
+    rows: Optional[List[Dict[str, Any]]] = Field(None, description="Query result rows")
+    column_info: Optional[List[Dict[str, str]]] = Field(None, description="Column metadata")
+    data_scanned_bytes: Optional[int] = Field(None, description="Amount of data scanned")
+    execution_time_ms: Optional[int] = Field(None, description="Query execution time in milliseconds")
+    error_message: Optional[str] = Field(None, description="Error message if query failed")
 
 
-class WikipediaError(Exception):
-    def __init__(self, message: str, status_code: int = 500):
+class DatabaseSummary(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    
+    database_name: str = Field(..., description="Database name")
+    table_count: int = Field(..., description="Number of tables in database")
+    tables: List[str] = Field(..., description="List of table names")
+
+
+class SchemaDiscoveryResult(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    
+    databases: List[DatabaseSummary] = Field(..., description="Available databases")
+    total_tables: int = Field(..., description="Total number of tables across all databases")
+
+
+class AthenaError(Exception):
+    def __init__(self, message: str, query_id: Optional[str] = None):
         super().__init__(message)
         self.message = message
-        self.status_code = status_code
+        self.query_id = query_id

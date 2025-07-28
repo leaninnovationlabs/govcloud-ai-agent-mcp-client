@@ -60,6 +60,11 @@ help:
 > @echo "  lint             Run linting checks"
 > @echo "  format           Format code"
 > @echo ""
+> @echo "Infrastructure Commands:"
+> @echo "  infra-up         Deploy AWS data lake infrastructure"
+> @echo "  infra-down       Destroy AWS data lake infrastructure"
+> @echo "  infra-data       Generate and upload sample data to S3"
+> @echo ""
 > @echo "Utility Commands:"
 > @echo "  clean            Clean build artifacts and cache files"
 > @echo "  setup            Complete project setup (install + migrate)"
@@ -295,6 +300,71 @@ status:
 > @echo "  MCP Health: http://localhost:$(MCP_SERVER_PORT)/health"
 
 .PHONY: clean status
+
+# ==============================================================================
+# Infrastructure Management
+# ==============================================================================
+
+INFRA_DIR := infra
+INFRA_ENV ?= dev
+
+## Deploy AWS data lake infrastructure
+infra-up:
+> @echo "🚀 Deploying maritime data lake infrastructure..."
+> @echo "   Environment: $(INFRA_ENV)"
+> cd $(INFRA_DIR) && terraform init
+> cd $(INFRA_DIR) && terraform plan -var="environment=$(INFRA_ENV)"
+> cd $(INFRA_DIR) && terraform apply -var="environment=$(INFRA_ENV)" -auto-approve
+> @echo "✅ Infrastructure deployment complete!"
+> @echo ""
+> @echo "🔗 Next steps:"
+> @echo "  1. Run 'make infra-data' to generate and upload sample data"
+> @echo "  2. Check AWS Athena console to query your data lake"
+
+## Destroy AWS data lake infrastructure
+infra-down:
+> @echo "💥 Destroying maritime data lake infrastructure..."
+> @echo "   Environment: $(INFRA_ENV)"
+> @echo "⚠️  This will permanently delete all infrastructure and data!"
+> @read -p "Are you sure? Type 'yes' to continue: " confirm && [ "$$confirm" = "yes" ]
+> cd $(INFRA_DIR) && terraform destroy -var="environment=$(INFRA_ENV)" -auto-approve
+> @echo "✅ Infrastructure destroyed!"
+
+## Generate and upload sample data to S3
+infra-data:
+> @echo "📊 Generating and uploading maritime shipping data..."
+> @echo "🔧 Installing Python dependencies..."
+> cd $(INFRA_DIR) && pip install -r requirements.txt
+> @echo "🚢 Generating sample data..."
+> cd $(INFRA_DIR)/scripts && python generate_sample_data.py
+> @echo "📤 Uploading data and running Glue crawler..."
+> cd $(INFRA_DIR)/scripts && python upload_data_and_crawl.py
+> @echo "✅ Data lake is ready for querying in Athena!"
+
+## Show infrastructure status
+infra-status:
+> @echo "📋 Infrastructure Status:"
+> @echo "   Environment: $(INFRA_ENV)"
+> @if [ -f "$(INFRA_DIR)/.terraform/terraform.tfstate" ] || [ -f "$(INFRA_DIR)/terraform.tfstate" ]; then \
+>   echo "   ✅ Terraform state found"; \
+>   cd $(INFRA_DIR) && terraform show -json | jq -r '.values.outputs | to_entries[] | "   \(.key): \(.value.value)"' 2>/dev/null || echo "   ℹ️  Use 'terraform output' for detailed info"; \
+> else \
+>   echo "   ❌ No Terraform state found - run 'make infra-up' first"; \
+> fi
+
+## Initialize Terraform only
+infra-init:
+> @echo "🔧 Initializing Terraform..."
+> cd $(INFRA_DIR) && terraform init
+> @echo "✅ Terraform initialized!"
+
+## Plan infrastructure changes
+infra-plan:
+> @echo "📋 Planning infrastructure changes..."
+> @echo "   Environment: $(INFRA_ENV)"
+> cd $(INFRA_DIR) && terraform plan -var="environment=$(INFRA_ENV)"
+
+.PHONY: infra-up infra-down infra-data infra-status infra-init infra-plan
 
 # ==============================================================================
 # Legacy aliases for backward compatibility
