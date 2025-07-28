@@ -1,8 +1,29 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@layer base {  
+/* Define CSS variables for custom border and other theme colors */
+:root {
+  --border: hsl(214.3 31.8% 91.4%);
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(222.2 84% 4.9%);
+  --muted: hsl(210 40% 96%);
+  --muted-foreground: hsl(215.4 16.3% 46.9%);
+  --radius: 0.5rem;
+}
+
+.dark {
+  --border: hsl(217.2 32.6% 17.5%);
+  --background: hsl(222.2 84% 4.9%);
+  --foreground: hsl(210 40% 98%);
+  --muted: hsl(217.2 32.6% 17.5%);
+  --muted-foreground: hsl(215 20.2% 65.1%);
+}
+
+/* Define custom utilities */
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+  
   body {
     @apply bg-white text-gray-900;
     font-feature-settings: "rlig" 1, "calt" 1;
