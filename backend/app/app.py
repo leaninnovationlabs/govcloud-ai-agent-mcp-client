@@ -3,7 +3,8 @@ from contextlib import asynccontextmanager
 import logfire
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -37,11 +38,19 @@ async def lifespan(app: FastAPI):
     await engine.dispose()
     logger.info("Application shutdown completed")
 
+origins = ["http://localhost:5173"]
 
 app = FastAPI(
     title=settings.api_title,
     version=settings.api_version,
     lifespan=lifespan,
+)
+
+app.add_middleware(CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Add logging middleware
@@ -150,3 +159,10 @@ async def health_check() -> APIResponse[dict]:
         "version": settings.api_version,
         "service": "govcloud-ai-agent-poc"
     })
+
+
+@app.get("/conversations")
+async def redirect_conversations():
+    """Redirect /conversations to /conversations/ for better UX."""
+    logger.debug("Redirecting /conversations to /conversations/")
+    return RedirectResponse(url="/conversations/", status_code=status.HTTP_301_MOVED_PERMANENTLY)

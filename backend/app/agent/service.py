@@ -184,11 +184,14 @@ class AgentService(LoggerMixin):
 
     @handle_exceptions()
     @log_execution_time
-    async def list_conversations(self) -> list[MessageRead]:
+    async def list_conversations(self) -> list['ConversationRead']:
         """List all conversations with proper error handling."""
+        from ..conversation.models import ConversationRead
         conversations = await self._conversation_repository.get_all_conversations()
-        self._log_info("Listed conversations", count=len(conversations))
-        return conversations
+        # Convert to serializable ConversationRead objects
+        conversation_data = [ConversationRead.model_validate(conv) for conv in conversations]
+        self._log_info("Listed conversations", count=len(conversation_data))
+        return conversation_data
 
     @handle_exceptions()
     @log_execution_time

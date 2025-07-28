@@ -94,13 +94,8 @@ async def chat_message(
     )
 
 
-@router.get("/conversations")
-async def list_conversations(
-    service: AgentService = Depends(get_agent_service),
-) -> APIResponse:
-    """List all conversations."""
-    conversations = await service.list_conversations()
-    return APIResponse(data=conversations)
+# Note: Conversation listing moved to /conversations/ (conversation module)
+# to avoid route conflicts and maintain proper separation of concerns
 
 
 @router.get("/conversations/{conversation_id}/messages")
