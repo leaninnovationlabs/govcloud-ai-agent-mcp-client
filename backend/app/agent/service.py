@@ -23,6 +23,7 @@ from .graph_nodes import (
     RouterNode,
     PlannerNode,
     ToolExecutorNode,
+    ToolResultAnalyzerNode,
     ResponderNode,
 )
 
@@ -73,7 +74,7 @@ class AgentService(LoggerMixin):
         
         # Initialize the graph with proper nodes
         self._graph = Graph(
-            nodes=[RouterNode, PlannerNode, ToolExecutorNode, ResponderNode]
+            nodes=[RouterNode, PlannerNode, ToolExecutorNode, ToolResultAnalyzerNode, ResponderNode]
         )
         
         # Create dependencies once for reuse
@@ -181,28 +182,6 @@ class AgentService(LoggerMixin):
                            exc_info=e, 
                            execution_time_seconds=round(execution_time, 3))
             yield "I encountered an error processing your request. Please try again."
-
-    @handle_exceptions()
-    @log_execution_time
-    async def list_conversations(self) -> list['ConversationRead']:
-        """List all conversations with proper error handling."""
-        from ..conversation.models import ConversationRead
-        conversations = await self._conversation_repository.get_all_conversations()
-        # Convert to serializable ConversationRead objects
-        conversation_data = [ConversationRead.model_validate(conv) for conv in conversations]
-        self._log_info("Listed conversations", count=len(conversation_data))
-        return conversation_data
-
-    @handle_exceptions()
-    @log_execution_time
-    async def get_conversation_messages(self, conversation_id: int) -> list[MessageRead]:
-        """Get all messages in a conversation with validation."""
-        async with self._conversation_context(conversation_id):
-            messages = await self._message_repository.get_messages_by_conversation_id(conversation_id)
-            self._log_info("Retrieved conversation messages", 
-                          conversation_id=conversation_id, 
-                          message_count=len(messages))
-            return messages
 
     def __repr__(self) -> str:
         """Professional string representation for debugging."""

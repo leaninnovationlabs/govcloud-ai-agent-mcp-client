@@ -93,21 +93,6 @@ async def chat_message(
         },
     )
 
-
-# Note: Conversation listing moved to /conversations/ (conversation module)
-# to avoid route conflicts and maintain proper separation of concerns
-
-
-@router.get("/conversations/{conversation_id}/messages")
-async def get_conversation_messages(
-    conversation_id: int,
-    service: AgentService = Depends(get_agent_service),
-) -> APIResponse:
-    """Get messages for a specific conversation."""
-    messages = await service.get_conversation_messages(conversation_id)
-    return APIResponse(data=messages)
-
-
 @router.get("/health")
 async def health_check(
     settings: Settings = Depends(get_settings),

@@ -14,6 +14,7 @@ class NodeType(str, Enum):
     ROUTER = "router"
     PLANNER = "planner"
     TOOL_EXECUTOR = "tool_executor"
+    TOOL_ANALYZER = "tool_analyzer"
     RESPONDER = "responder"
 
 
@@ -69,6 +70,8 @@ class AgentState:
     final_response: Optional[str] = None
     current_node: NodeType = NodeType.ROUTER
     created_at: datetime = field(default_factory=datetime.utcnow)
+    schema_discovery_result: Optional[dict[str, Any]] = None
+    last_error: Optional[str] = None
 
     def add_context(self, context: str) -> None:
         """Appends a string to the accumulated context."""
@@ -92,4 +95,18 @@ class AgentState:
                 call.error = error
                 self.completed_tool_calls.append(call)
                 self.pending_tool_calls.remove(call)
+                self.last_error = error
                 break
+    
+    def retry_failed_calls(self) -> None:
+        """Moves failed calls back to the pending list for a retry."""
+        failed_calls = [call for call in self.completed_tool_calls if call.status == ToolCallStatus.FAILED]
+        for call in failed_calls:
+            call.status = ToolCallStatus.PENDING
+            call.error = None
+            self.pending_tool_calls.append(call)
+            self.completed_tool_calls.remove(call)
+
+    def clear_tool_history(self) -> None:
+        """Clears the history of completed tool calls."""
+        self.completed_tool_calls = []

@@ -9,6 +9,7 @@ dependencies = [
     "boto3>=1.39.13",
     "faker>=37.4.2",
     "fastapi>=0.116.1",
+    "instructor>=1.10.0",
     "numpy>=2.3.2",
     "pandas>=2.3.1",
     "pyarrow>=21.0.0",
